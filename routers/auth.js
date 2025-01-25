@@ -1,6 +1,6 @@
 import express from "express";
-import { loginValidation, registerValidation } from "../Middlewares/AuthValidation.js";
-import { login, signup } from "../Controllers/authcontroller.js";
+import { loginValidation, registerValidation } from "../middlewares/authValidation.js";
+import { login, signup } from "../controllers/authcontroller.js";
 
 
 
