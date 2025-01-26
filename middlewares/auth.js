@@ -1,27 +1,19 @@
-import jwt from "jsonwebtoken";
+import jwt from 'jsonwebtoken';
 
-const ensureAuth = (req, res, next) => {
+const auth = async (req, res, next) => {
     try {
-        const token = req.headers["authorization"];
+        const token = req.header('Authorization')?.replace('Bearer ', '');
 
         if (!token) {
-            return res.status(401).json({
-                message: "Access denied. No token provided.",
-            });
+            return res.status(401).json({ message: 'No authentication token, access denied' });
         }
 
-
-        const decoded = jwt.verify(token, process.env.JWT_SECRET);
-
-        req.user = decoded;
-
+        const verified = jwt.verify(token, process.env.JWT_SECRET);
+        req.user = verified;
         next();
-    } catch (err) {
-        console.error("Authorization error:", err);
-        return res.status(403).json({
-            message: "Invalid or expired token.",
-        });
+    } catch (error) {
+        res.status(401).json({ message: 'Token verification failed, authorization denied' });
     }
 };
 
-export default ensureAuth;
+export default auth;

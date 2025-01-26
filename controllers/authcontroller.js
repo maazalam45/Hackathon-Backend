@@ -1,90 +1,87 @@
-import bcrypt from "bcryptjs";
-import User from "../models/user.js";
-import jwt from "jsonwebtoken";
+import bcrypt from 'bcryptjs';
+import jwt from 'jsonwebtoken';
+import User from '../models/User.js';
 
-
-const signup = async (req, res) => {
+export const register = async (req, res) => {
     try {
-        const { email, password, fullname } = req.body;
+        const { name, email, password, cnic } = req.body;
 
         // Check if user already exists
-        const existingUser = await User.findOne({ email });
+        const existingUser = await User.findOne({ $or: [{ email }, { cnic }] });
         if (existingUser) {
-            return res.status(400).json({
-                message: "Email already in use, please try a different one."
-            });
+            return res.status(400).json({ message: 'User already exists' });
         }
 
-        // Hash password before storing it
+        // Hash password
         const salt = await bcrypt.genSalt(10);
         const hashedPassword = await bcrypt.hash(password, salt);
 
-        // Create a new user instance
-        const newUser = new User({
-            fullname,
+        // Create new user
+        const user = new User({
+            name,
             email,
-            password: hashedPassword, // Store the hashed password
+            password: hashedPassword,
+            cnic
         });
 
-        // Save the new user to the database
-        await newUser.save();
+        await user.save();
 
-        // Send successful response
+        // Generate JWT token
+        const token = jwt.sign(
+            { userId: user._id },
+            process.env.JWT_SECRET,
+            { expiresIn: '24h' }
+        );
+
         res.status(201).json({
-            message: "User registered successfully!",
-            success: true,
-            user: { fullname: newUser.fullname, email: newUser.email } // Send back user info except password
+            token,
+            user: {
+                id: user._id,
+                name: user.name,
+                email: user.email,
+                cnic: user.cnic
+            }
         });
-    } catch (err) {
-        console.error("Error during signup:", err);
-        res.status(500).json({
-            message: "Server error, please try again later.",
-            success: false
-        });
+    } catch (error) {
+        console.error('Registration error:', error);
+        res.status(500).json({ message: 'Server error' });
     }
 };
 
-
-const login = async (req, res) => {
+export const login = async (req, res) => {
     try {
         const { email, password } = req.body;
 
-        // Check if the user exists
-        const existingUser = await User.findOne({ email });
-        if (!existingUser) {
-            return res.status(404).json({
-                message: "User not found. Please register first.",
-            });
+        // Check if user exists
+        const user = await User.findOne({ email });
+        if (!user) {
+            return res.status(400).json({ message: 'Invalid credentials' });
         }
 
-        // Compare the provided password with the stored hashed password
-        const isPasswordValid = await bcrypt.compare(password, existingUser.password);
-        if (!isPasswordValid) {
-            return res.status(400).json({
-                message: "Invalid email or password. Please try again.",
-            });
+        // Verify password
+        const isMatch = await bcrypt.compare(password, user.password);
+        if (!isMatch) {
+            return res.status(400).json({ message: 'Invalid credentials' });
         }
+
+        // Generate JWT token
         const token = jwt.sign(
-            { userId: existingUser._id, email: existingUser.email },
+            { userId: user._id },
             process.env.JWT_SECRET,
-            { expiresIn: "24h" }
+            { expiresIn: '24h' }
         );
 
-        res.status(200).json({
-            message: "Login successful!",
-            success: true,
+        res.json({
             token,
-            fullname: existingUser.fullname,
-            email: existingUser.email,
+            user: {
+                id: user._id,
+                name: user.name,
+                email: user.email,
+                cnic: user.cnic
+            }
         });
-
-    } catch (err) {
-        console.error("Error during login:", err);
-        res.status(500).json({
-            message: "Server error, please try again later.",
-            success: false,
-        });
+    } catch (error) {
+        console.error('Login error:', error);
+        res.status(500).json({ message: 'Server error' });
     }
 };
-
-export { signup, login };
