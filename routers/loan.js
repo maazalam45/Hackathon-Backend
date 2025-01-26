@@ -4,7 +4,7 @@ import auth from '../middlewares/auth.js';
 import { generateStrongPassword } from '../middlewares/password.js';
 
 import LoanApplication from '../models/loanApplication.js';
-import User from '../models/User.js';
+import User from '../models/user.js';
 
 const router = express.Router();
 
